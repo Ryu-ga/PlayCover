@@ -202,31 +202,51 @@ class PlayApp: BaseApp {
         }
     }
 
-    func introspection(set: Bool? = nil) -> Bool {
+    func appendDyldLibraryPaths(set: Bool? = nil, libraryPaths: [String]) -> Bool {
         if info.lsEnvironment["DYLD_LIBRARY_PATH"] == nil {
             info.lsEnvironment["DYLD_LIBRARY_PATH"] = ""
         }
 
         if let set = set {
-            if set {
-                info.lsEnvironment["DYLD_LIBRARY_PATH"]? += "/usr/lib/system/introspection:"
-            } else {
-                info.lsEnvironment["DYLD_LIBRARY_PATH"] = info.lsEnvironment["DYLD_LIBRARY_PATH"]?
-                    .replacingOccurrences(of: "/usr/lib/system/introspection:", with: "")
-            }
-
-            do {
-                try Shell.signApp(executable)
-            } catch {
-                Log.shared.error(error)
+            for libraryPath in libraryPaths {
+                if set {
+                    info.lsEnvironment["DYLD_LIBRARY_PATH"]? += libraryPath
+                } else {
+                    info.lsEnvironment["DYLD_LIBRARY_PATH"] = info.lsEnvironment["DYLD_LIBRARY_PATH"]?
+                        .replacingOccurrences(of: libraryPath, with: "")
+                }
             }
         }
 
-        guard let introspection = info.lsEnvironment["DYLD_LIBRARY_PATH"] else {
+        guard let result = info.lsEnvironment["DYLD_LIBRARY_PATH"] else {
             return false
         }
 
-        return introspection.contains("/usr/lib/system/introspection")
+        for libraryPath in libraryPaths where !result.contains(libraryPath) {
+            return false
+        }
+
+        return true
+    }
+
+    func iosFrameworkCompat(set: Bool? = nil) -> Bool {
+        let result = appendDyldLibraryPaths(set: set, libraryPaths: ["/System/iOSSupport/System/Library/Frameworks:"])
+        do {
+            try Shell.signApp(executable)
+        } catch {
+            Log.shared.error(error)
+        }
+        return result
+    }
+
+    func introspection(set: Bool? = nil) -> Bool {
+        let result = appendDyldLibraryPaths(set: set, libraryPaths: ["/usr/lib/system/introspection:"])
+        do {
+            try Shell.signApp(executable)
+        } catch {
+            Log.shared.error(error)
+        }
+        return result
     }
 
     func hasAlias() -> Bool {

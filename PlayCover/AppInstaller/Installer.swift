@@ -102,8 +102,7 @@ class Installer {
                 } else {
                     finalURL = try wrap(app)
                     let installedApp = PlayApp(appUrl: finalURL)
-
-                    installedApp.sign()
+                    _ = installedApp.iosFrameworkCompat(set: true)
                 }
 
                 ipa.releaseTempDir()
